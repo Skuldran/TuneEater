@@ -30,12 +30,13 @@ def observeSong(sp):
     artist_temp = song['artists']
     
     artists = []
+    artist_names = []
     for art in artist_temp:
         artists.append(art['id'])
-
+        artist_names.append(art['name'])
     
     
-    return {'song_id': song_id, 'playtime': song_playtime, 'length': song_length, 'song_name': song_name, 'context': context, 'context_type': context_type, 'artist': artists}
+    return {'song_id': song_id, 'playtime': song_playtime, 'length': song_length, 'song_name': song_name, 'context': context, 'context_type': context_type, 'artist': artists, 'artist_names': artist_names}
     
 class SpotifyObserver:
     
@@ -45,13 +46,14 @@ class SpotifyObserver:
         self.last_observation = play
         self.last_timestamp = time.time()
         
-        self.last_observation = observeSong(sp)
+        self.last_observation = None #observeSong(sp)
         print('Observer initialized.')
         
     def observe(self):
         play = observeSong(self.sp)
         
-        if play is None:
+        if play is None or self.last_observation is None:
+            self.last_observation = play
             return None
         
         delta_t = time.time()-self.last_timestamp
@@ -83,4 +85,5 @@ if __name__ == '__main__':
         
         if obs is not None:
             print(obs)
+            break
         

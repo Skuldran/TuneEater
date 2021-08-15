@@ -7,6 +7,8 @@ Created on Sat Aug 14 19:58:44 2021
 
 import random
 
+from Constants import *
+
 def find_song(songKey, artistKey, sp):
     #Choose random artist based on attractiveness
     #artists = artistKey.getIds()
@@ -40,7 +42,7 @@ def find_song(songKey, artistKey, sp):
 
     #If it was the 10th song from this artist, expand by adding all related artists
     #print('n: %g' % n)
-    if n==6:
+    if n==ARTIST_BRANCH_TRESHOLD:
         print('Adding related artists')
         add_related_artists(pick, artistKey, sp)
     

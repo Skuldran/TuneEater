@@ -9,6 +9,7 @@ from os.path import isfile, isdir
 import json
 
 import SongFinder as sf
+from Constants import *
 
 def init_PlaylistManager(folder, sp, list_in, list_out):
     manager = PlaylistManager(folder, sp, list_in, list_out)
@@ -92,17 +93,16 @@ class PlaylistManager:
     def song_listened(self, obs):
         n = self.sk.recordData(obs['song_id'], obs['song_name'], obs['listen_fraction'])
         
-        for art in obs['artist']:
-            self.artists.recordData(art, None, obs['listen_fraction'])
+        for i in len(obs['artist']):
+            self.artists.recordData(obs['artist'][i], obs['artist_names'][0], obs['listen_fraction'])
         
-        if n >= 1:
+        if n >= SONG_REPEATS:
             #Remove track, move to out playlist
-            #print(obs['song_id'])
             self.sk.finish_song(obs['song_id'])
             self.sp.playlist_remove_all_occurrences_of_items(self.list_in, [obs['song_id']])
             
             score = self.sk.get_score(obs['song_id'])
-            if score>0:
+            if score>OUT_LIST_TRESHOLD:
                 self.sp.playlist_add_items(self.list_out, [obs['song_id']])
             
             #Add new tracks
@@ -112,7 +112,7 @@ class PlaylistManager:
     def fill_with_songs(self):
         temp = self.sp.playlist(self.list_in)
         tracks = temp['tracks']
-        noToAdd = 20-tracks['total']
+        noToAdd = PLAYLIST_SIZE-tracks['total']
         
         songs = []
         for i in range(noToAdd):

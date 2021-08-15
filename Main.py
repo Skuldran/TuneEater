@@ -11,6 +11,7 @@ import os
 import Authorization
 import SpotifyObserver
 import PlaylistManager as pm
+from Constants import *
 
 
 def look_for_new_lists(sp):
@@ -71,7 +72,7 @@ lastObservation = time.time()
 observer = SpotifyObserver.SpotifyObserver(sp)
 
 while True:
-    if time.time() > lastPlaylistCheck+30:
+    if time.time() > lastPlaylistCheck+SEARCH_PLAYLISTS_TIME:
         print('Looking for new playlists')
         in_id, out_id = look_for_new_lists(sp)
         lastPlaylistCheck = time.time()
@@ -82,7 +83,7 @@ while True:
             managerList[in_id] = pm.init_PlaylistManager(in_id, sp, in_id, out_id) #PlaylistManager(in_id, sp, in_id, out_id)
         
     
-    if time.time() > lastObservation+5:
+    if time.time() > lastObservation+OBSERVE_TIME:
         lastObservation = time.time()
         observ = observer.observe()
         if observ is None or observ['context_type'] != 'playlist' or not observ['context'] in managerList.keys():

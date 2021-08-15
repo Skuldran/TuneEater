@@ -1,0 +1,14 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Sun Aug 15 21:58:12 2021
+
+@author: Axel
+"""
+
+SEARCH_PLAYLISTS_TIME = 30
+OBSERVE_TIME = 5
+
+SONG_REPEATS = 5
+ARTIST_BRANCH_TRESHOLD = 10
+PLAYLIST_SIZE = 20
+OUT_LIST_TRESHOLD = 0.85
