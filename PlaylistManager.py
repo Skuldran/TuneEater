@@ -7,16 +7,13 @@ Created on Sat Aug 14 14:56:12 2021
 import os
 from os.path import isfile, isdir
 import json
+import pandas as pd
 
 import SongFinder as sf
 from Constants import *
 
 def init_PlaylistManager(folder, sp, list_in, list_out):
     manager = PlaylistManager(folder, sp, list_in, list_out)
-    #manager.list_in = list_in
-    #manager.list_out = list_out
-    
-
     
     manager.init()
     return manager
@@ -39,27 +36,12 @@ class PlaylistManager:
             os.mkdir('data//' + self.folder)
         
         #Song key dataFrame
-        self.sk = SongKey('data//' + self.folder, 'songs.json')
+        self.sk = ItemManager('data//' + self.folder, 'songs.json')
         
         #Concerned artists
-        self.artists = SongKey('data//' + self.folder, 'artists.json')
+        self.artists = ItemManager('data//' + self.folder, 'artists.json')
         
         #ML
-        
-        # #
-        # if created:
-        #     print('Trying to add songs')
-        #     temp = self.sp.playlist(self.list_in)
-        #     tracks = temp['tracks']
-        #     for t in tracks['items']:
-        #         track = t['track']
-        #         self.sk.recordData(track['id'], None, -1, sample=0, add=False)
-        #         artists = track['artists']
-        #         for a in artists:
-        #             #TODO estimate artist attractiveness
-        #             self.artists.recordData(a['id'], a['name'], 0.5, sample=0, add=False)
-                    
-        #     self.fill_with_songs()
     
     def load(self):
         if not os.path.isfile('data//' + self.folder + '//playlist.json'):
@@ -93,16 +75,18 @@ class PlaylistManager:
     def song_listened(self, obs):
         n = self.sk.recordData(obs['song_id'], obs['song_name'], obs['listen_fraction'])
         
-        for i in len(obs['artist']):
+        for i in range(len(obs['artist'])):
             self.artists.recordData(obs['artist'][i], obs['artist_names'][0], obs['listen_fraction'])
         
         if n >= SONG_REPEATS:
             #Remove track, move to out playlist
-            self.sk.finish_song(obs['song_id'])
+            print("Song '%s' is finsihed, removing it." % obs['song_name'])
+            self.sk.finish_item(obs['song_id'])
             self.sp.playlist_remove_all_occurrences_of_items(self.list_in, [obs['song_id']])
             
             score = self.sk.get_score(obs['song_id'])
             if score>OUT_LIST_TRESHOLD:
+                print("Song '%s' was good. Adding it to #Out playlist." % obs['song_name'])
                 self.sp.playlist_add_items(self.list_out, [obs['song_id']])
             
             #Add new tracks
@@ -124,77 +108,91 @@ class PlaylistManager:
         
         self.sp.playlist_add_items(self.list_in, songs)
         
-class SongKey:
+class ItemManager:
+    #Class to manage the song and artist data
     
     def __init__(self, folder, file):
         self.folder = folder
         self.file = file
         
         if isfile(folder + file):
-            with open(folder + '//' +  file, 'r') as fp:
-                self.songs = json.load(fp)
+            self.items = pd.read_csv(folder + '//' + file, index_col=0)
         else:
-            self.songs = {}
+            self.items = pd.DataFrame(columns=['name', 'item_id', 'listen_fraction', 'samples', 'finished'], index=[])
             
-    def containsSong(self, song_id):
-        return song_id in self.songs.keys()
+    def containsItem(self, item_id):
+        return item_id in self.items.index #self.items.keys()
     
-        #return song_id in self.songs['song_id']
+        #return item_id in self.items['item_id']
         
-    def recordData(self, song_id, song_name, listen_fraction, sample=1, add=True, finished=False):
-        if self.containsSong(song_id):
+    def recordData(self, item_id, item_name, listen_fraction, sample=1, add=True, finished=False):
+        if self.containsItem(item_id):
             if not add:
                 return 0
             
-            songDict = self.songs[song_id]
+            #itemRow = self.items.loc[item_id]
+            #itemDict = self.items[item_id]
             
-            n = songDict['samples']+1
             
-            songDict['listen_fraction'] = ((n-1)/n)*songDict['listen_fraction'] + (1/n)*listen_fraction
-            songDict['samples'] = n
+            n = self.items.at[item_id, 'samples']+1
             
-            if songDict['name'] is None:
-                songDict['name'] = song_name
-            self.songs[song_id] = songDict
+            self.items.at[item_id, 'listen_fraction'] = ((n-1)/n)*self.items.at[item_id, 'listen_fraction'] + (1/n)*listen_fraction
+            self.items.at[item_id, 'samples'] = n
+            
+            if self.items.at[item_id, 'name'] is None:
+                self.items.at[item_id, 'name'] = item_name
+            
+            #self.items[item_id] = itemRow
             
             #If reached the number of samples
-            
             
             self.save_data()
             return n
         else:
-            self.songs[song_id] = {'name': song_name, 'song_id': song_id, 'listen_fraction': listen_fraction, 'samples': sample, 'finished': finished}
+            rowDict = {item_id: {'name': item_name, 'item_id': item_id, 'listen_fraction': listen_fraction, 'samples': sample, 'finished': finished}}
+            
+            df = pd.DataFrame(rowDict.values(), index=rowDict.keys())
+            self.items = self.items.append(df)
+            
+            #self.items[item_id] = {'name': item_name, 'item_id': item_id, 'listen_fraction': listen_fraction, 'samples': sample, 'finished': finished}
             self.save_data()
             return 1
             
     def save_data(self):
-        with open(self.folder + '//' + self.file, 'w') as fp:
-            json.dump(self.songs, fp)
+        self.items.to_csv(self.folder + '//' + self.file)
+        #with open(self.folder + '//' + self.file, 'w') as fp:
+        #    json.dump(self.items, fp)
                 
-    def get_score(self, song_id):
-        return self.songs[song_id]['listen_fraction']
+    def get_score(self, item_id):
+        return self.items.loc[item_id]['listen_fraction']
+        #return self.items[item_id]['listen_fraction']
                 
     def get_scores(self, exclude_finished=False):
-        #keys = list(self.songs.keys()).copy()
-        keys = []
-        scores = []
+        #keys = list(self.items.keys()).copy()
+        keys = list(self.items.index)
+        scores = list(self.items['listen_fraction'])
+        finished = list(self.items['finished'])
         
-        for k in self.songs.keys():
-            if exclude_finished and self.songs[k]['finished']:
-                continue
-            
-            keys.append(k)
-            scores.append(self.songs[k]['listen_fraction'])
+        if exclude_finished:
+            i = 0
+            while i<len(finished):
+                if not finished[i]:
+                    keys.pop(i)
+                    scores.pop(i)
+                    finished.pop(i)
+                else:
+                    i = i+1
 
         return keys, scores
 
-    def finish_song(self, song):
+    def finish_item(self, item):
         
-        if not self.containsSong(song):
-            print('Tried to finish item %s but it does not exist' % song)
+        if not self.containsItem(item):
+            print('Tried to finish item %s but it does not exist' % item)
             return
         
-        self.songs[song]['finished'] = True
+        self.items.at[item, 'finished'] = True
+        #self.items[item]['finished'] = True
             
 if __name__ == '__main__':
     if not isdir('test'):

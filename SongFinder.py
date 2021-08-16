@@ -11,11 +11,9 @@ from Constants import *
 
 def find_song(songKey, artistKey, sp):
     #Choose random artist based on attractiveness
-    #artists = artistKey.getIds()
     artists, weights = artistKey.get_scores()
     
     pick = random.choices(artists, weights)[0]
-    
     #Choose random song
     song_list = get_artist_songs(sp, pick)
     
@@ -27,14 +25,14 @@ def find_song(songKey, artistKey, sp):
         song = song_list[i]
         
         #print('Comparing %s' % song)
-        if songKey.containsSong(song):
+        if songKey.containsItem(song):
             n = n+1
             song_list.remove(song)
         else:
             i = i+1
     
     if len(song_list) == 0:
-        artistKey.finish_song(pick)
+        artistKey.finish_item(pick)
         return find_song(songKey, artistKey, sp)
     
     #TODO Pick the best tracks according to ML

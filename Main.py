@@ -16,13 +16,20 @@ from Constants import *
 
 def look_for_new_lists(sp):
     ans = sp.current_user_playlists()
-    
     playlists = ans['items']
-     
+    
+    user_ans = sp.me()
+    user_id = user_ans['id']
+    
     for p in playlists:
+
+        if '#Cat' in p['name']:
+            print('Alive check confirm.')
+            sp.user_playlist_change_details(user_id, p['id'], name=p['name'].replace('#Cat', '#Alive'))    
+    
         if p['id'] in managerList.keys():
             continue
-        
+    
         if '#TuneEater' in p['name']:
             if p['tracks']['total'] == 0:
                 continue
@@ -30,8 +37,7 @@ def look_for_new_lists(sp):
             in_id = p['id']
             print('Found new playlist to adopt: %s' % p['name'])
             
-            user_ans = sp.me()
-            user_id = user_ans['id']
+            
             
             sp.user_playlist_change_details(user_id, in_id, name=p['name'].replace('#TuneEater', '#In'))
             ans = sp.user_playlist_create(user_id, p['name'].replace('#TuneEater', '#Out'), public=False)

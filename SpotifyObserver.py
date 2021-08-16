@@ -85,5 +85,5 @@ if __name__ == '__main__':
         
         if obs is not None:
             print(obs)
-            break
+            #break
         
