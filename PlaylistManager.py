@@ -8,6 +8,7 @@ import os
 from os.path import isfile, isdir
 import json
 import pandas as pd
+import math
 
 import SongFinder as sf
 from Constants import *
@@ -36,10 +37,10 @@ class PlaylistManager:
             os.mkdir('data//' + self.folder)
         
         #Song key dataFrame
-        self.sk = ItemManager('data//' + self.folder, 'songs.json')
+        self.sk = ItemManager('data//' + self.folder, 'songs.csv')
         
         #Concerned artists
-        self.artists = ItemManager('data//' + self.folder, 'artists.json')
+        self.artists = ItemManager('data//' + self.folder, 'artists.csv')
         
         #ML
     
@@ -64,23 +65,32 @@ class PlaylistManager:
         tracks = temp['tracks']
         for t in tracks['items']:
            track = t['track']
-           self.sk.recordData(track['id'], None, -1, sample=0, add=False)
+           
+
            artists = track['artists']
+           artst_ids = []
            for a in artists:
                #TODO estimate artist attractiveness
-               self.artists.recordData(a['id'], a['name'], 0.5, sample=0, add=False)
+               self.artists.recordData(a['id'], {'item_name': a['name']}, overwrite=False)
+               self.artists.recordScore(a['id'], 0.5, sample=0, overwrite=False)
+               artist_ids.append(a['id'])
+               
+        self.sk.recordData(track['id'], {'item_name': track['name'], 'artists': artist_ids}, overwrite=False)
+        self.sk.recordScore(track['id'], -1, sample=0, overwrite=False)
                 
         self.fill_with_songs()
             
     def song_listened(self, obs):
-        n = self.sk.recordData(obs['song_id'], obs['song_name'], obs['listen_fraction'])
+        n = self.sk.recordScore(obs['song_id'], obs['listen_fraction'])
+        self.sk.recordData(obs['song_id'], {'item_name': obs['song_name'], 'artists': obs['artist']})
         
         for i in range(len(obs['artist'])):
-            self.artists.recordData(obs['artist'][i], obs['artist_names'][0], obs['listen_fraction'])
+            self.artists.recordData(obs['artist'][i], {'item_name': obs['artist_names'][i]})
+            self.artists.recordScore(obs['artist'][i], obs['listen_fraction'])
         
         if n >= SONG_REPEATS:
             #Remove track, move to out playlist
-            print("Song '%s' is finsihed, removing it." % obs['song_name'])
+            print("Song '%s' is finished, removing it." % obs['song_name'])
             self.sk.finish_item(obs['song_id'])
             self.sp.playlist_remove_all_occurrences_of_items(self.list_in, [obs['song_id']])
             
@@ -104,9 +114,11 @@ class PlaylistManager:
             
             if song is not None:
                 songs.append(song)
-                self.sk.recordData(song, None, -1, sample=0, add=False)
+                self.sk.recordScore(song, -1, sample=0, add=False)
         
-        self.sp.playlist_add_items(self.list_in, songs)
+        if len(songs)>0:
+            print('Adding songs to playlist: %s' % songs)
+            self.sp.playlist_add_items(self.list_in, songs)
         
 class ItemManager:
     #Class to manage the song and artist data
@@ -115,7 +127,7 @@ class ItemManager:
         self.folder = folder
         self.file = file
         
-        if isfile(folder + file):
+        if isfile(folder + '/' + file):
             self.items = pd.read_csv(folder + '//' + file, index_col=0)
         else:
             self.items = pd.DataFrame(columns=['name', 'item_id', 'listen_fraction', 'samples', 'finished'], index=[])
@@ -123,40 +135,55 @@ class ItemManager:
     def containsItem(self, item_id):
         return item_id in self.items.index #self.items.keys()
     
-        #return item_id in self.items['item_id']
+    def get_cell(self, item_id, field):
+        if not field in self.items.columns or not item_id in self.items.index:
+            return None
         
-    def recordData(self, item_id, item_name, listen_fraction, sample=1, add=True, finished=False):
+        val = self.items.at[item_id, field]
+        if type(val)==float and math.isnan(val):
+            return None
+                
+        return val
+        
+    def recordData(self, item_id, features, overwrite=True, save=True):
         if self.containsItem(item_id):
-            if not add:
+            
+            for f in features.keys():
+                if not overwrite and f in self.items.columns:
+                    val = self.items.at[item_id, f]
+                    
+                    if val is not None and type(val)==float and not math.isnan(val):
+                        continue
+                
+                self.items.at[item_id, f] = features[f]
+        else:
+            tempDict = {item_id: features}
+            df = pd.DataFrame(tempDict.values(), index=tempDict.keys())
+            self.items = self.items.append(df)
+            
+        if save:
+            save_data()
+    
+    def recordScore(self, item_id, listen_fraction, sample=1, overwrite=True):
+        if self.containsItem(item_id):
+            if not overwrite:
                 return 0
-            
-            #itemRow = self.items.loc[item_id]
-            #itemDict = self.items[item_id]
-            
             
             n = self.items.at[item_id, 'samples']+1
             
             self.items.at[item_id, 'listen_fraction'] = ((n-1)/n)*self.items.at[item_id, 'listen_fraction'] + (1/n)*listen_fraction
             self.items.at[item_id, 'samples'] = n
             
-            if self.items.at[item_id, 'name'] is None:
-                self.items.at[item_id, 'name'] = item_name
-            
-            #self.items[item_id] = itemRow
-            
-            #If reached the number of samples
-            
             self.save_data()
             return n
         else:
-            rowDict = {item_id: {'name': item_name, 'item_id': item_id, 'listen_fraction': listen_fraction, 'samples': sample, 'finished': finished}}
+            rowDict = {item_id: {'item_id': item_id, 'listen_fraction': listen_fraction, 'samples': sample, 'finished': False}}
             
             df = pd.DataFrame(rowDict.values(), index=rowDict.keys())
             self.items = self.items.append(df)
             
-            #self.items[item_id] = {'name': item_name, 'item_id': item_id, 'listen_fraction': listen_fraction, 'samples': sample, 'finished': finished}
             self.save_data()
-            return 1
+            return sample
             
     def save_data(self):
         self.items.to_csv(self.folder + '//' + self.file)

@@ -32,6 +32,7 @@ def find_song(songKey, artistKey, sp):
             i = i+1
     
     if len(song_list) == 0:
+        print('Artist %s is finished, finding another song.' % pick)
         artistKey.finish_item(pick)
         return find_song(songKey, artistKey, sp)
     
@@ -40,7 +41,7 @@ def find_song(songKey, artistKey, sp):
 
     #If it was the 10th song from this artist, expand by adding all related artists
     #print('n: %g' % n)
-    if n==ARTIST_BRANCH_TRESHOLD:
+    if n>=ARTIST_BRANCH_TRESHOLD:
         print('Adding related artists')
         add_related_artists(pick, artistKey, sp)
     
@@ -72,6 +73,7 @@ def add_related_artists(artist, artistKey, sp):
     for art in artists:
         #TODO adjust score according to ML algorithm
         print('Adding artist: %s' % art['name'])
-        artistKey.recordData(art['id'], art['name'], 0.5, sample=0, add=False)
+        artistKey.recordData(art['id'], {'item_name': art['name']}, overwrite=False)
+        artistKey.recordScore(art['id'], 0.5, sample=0, overwrite=False)
             
     

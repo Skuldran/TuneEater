@@ -26,7 +26,7 @@ if not os.path.isdir('data'):
     os.mkdir('data')
     
 ## TODO load and save data.
-folders = os.listdir('data')
+folders = os.listdir('data_backup')
 
 for fold in folders:
-    convert_data('data//' + fold)
+    convert_data('data_backup//' + fold)
