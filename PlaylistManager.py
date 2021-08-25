@@ -12,6 +12,8 @@ import math
 
 import SongFinder as sf
 from Constants import *
+import NeuralNetwork as nn
+import DataParser as dp
 
 def init_PlaylistManager(folder, sp, list_in, list_out):
     manager = PlaylistManager(folder, sp, list_in, list_out)
@@ -43,6 +45,7 @@ class PlaylistManager:
         self.artists = ItemManager('data//' + self.folder, 'artists.csv')
         
         #ML
+        self.generate_neural_network()
     
     def load(self):
         if not os.path.isfile('data//' + self.folder + '//playlist.json'):
@@ -71,13 +74,16 @@ class PlaylistManager:
            artst_ids = []
            for a in artists:
                #TODO estimate artist attractiveness
+               print(a)
                self.artists.recordData(a['id'], {'item_name': a['name']}, overwrite=False)
-               self.artists.recordScore(a['id'], 0.5, sample=0, overwrite=False)
+               self.artists.recordScore(a['id'], NEW_ARTIST_SCORE, sample=0, overwrite=False) #TODO use ML
                artist_ids.append(a['id'])
-               
+        
         self.sk.recordData(track['id'], {'item_name': track['name'], 'artists': artist_ids}, overwrite=False)
         self.sk.recordScore(track['id'], -1, sample=0, overwrite=False)
-                
+        
+        #self.generate_neural_network()
+        
         self.fill_with_songs()
             
     def song_listened(self, obs):
@@ -85,6 +91,10 @@ class PlaylistManager:
         self.sk.recordData(obs['song_id'], {'item_name': obs['song_name'], 'artists': obs['artist']})
         
         for i in range(len(obs['artist'])):
+            if not self.artists.containsItem(obs['artist'][i]):
+                score = sf.get_avg_artist_score(obs['artist'][i], sp, brain)
+                #self.artists.recordScore(obs['artist'][i], score, sample=)
+            
             self.artists.recordData(obs['artist'][i], {'item_name': obs['artist_names'][i]})
             self.artists.recordScore(obs['artist'][i], obs['listen_fraction'])
         
@@ -110,15 +120,22 @@ class PlaylistManager:
         
         songs = []
         for i in range(noToAdd):
-            song = sf.find_song(self.sk, self.artists, self.sp)
+            song = sf.find_song(self.sk, self.artists, self.sp, self.brain)
             
             if song is not None:
                 songs.append(song)
-                self.sk.recordScore(song, -1, sample=0, add=False)
+                self.sk.recordScore(song, -1, sample=0, overwrite=False)
         
         if len(songs)>0:
             print('Adding songs to playlist: %s' % songs)
             self.sp.playlist_add_items(self.list_in, songs)
+            
+    def generate_neural_network(self):
+        dp.populate_finished_songs(self.sp, self.sk)
+        self.brain = nn.NeuralNetwork(self.sk)
+        
+        #Printout ?
+        #print('Generated new brain for playlist %s' % self.list_in)
         
 class ItemManager:
     #Class to manage the song and artist data
@@ -147,7 +164,6 @@ class ItemManager:
         
     def recordData(self, item_id, features, overwrite=True, save=True):
         if self.containsItem(item_id):
-            
             for f in features.keys():
                 if not overwrite and f in self.items.columns:
                     val = self.items.at[item_id, f]
@@ -162,7 +178,7 @@ class ItemManager:
             self.items = self.items.append(df)
             
         if save:
-            save_data()
+            self.save_data()
     
     def recordScore(self, item_id, listen_fraction, sample=1, overwrite=True):
         if self.containsItem(item_id):

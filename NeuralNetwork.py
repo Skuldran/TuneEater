@@ -6,6 +6,8 @@ Created on Sun Aug 15 13:08:40 2021
 """
 
 import pandas as pd
+import numpy as np
+from numpy import random
 
 from keras.models import Sequential
 from keras.layers import Dense
@@ -14,53 +16,100 @@ from keras.layers import Dense
 X_PARAMETERS = ['popularity', 'danceability', 'energy', 'loudness', 'mode', 'speechiness', \
                 'acousticness', 'instrumentalness', 'liveness', 'valence', 'tempo', 'time_signature']
 
+X_PARAMETERS.remove('popularity')
+
 DUMMIES = ['mode', 'time_signature']
 
-Y_PARAMETERS = ['listen_fraction']
+Y_VALUE = 'listen_fraction'
 
 class NeuralNetwork:
+    
     
     def __init__(self, data=None):
         if data is None:
             return
         
-        X, y = format_data(data)
+        songs = data.items
+        songs = songs[songs.finished]
+        
+        if len(songs.index) < 100:
+            self.alive = False
+            print('Generated placeholder brain.')
+            return
+        
+        self.alive = True
+        
+        X = songs[X_PARAMETERS]
+        Y = songs[[Y_VALUE]]
+        
+        #map_dict = {}
+        for v in DUMMIES:
+            X[v] = v + '_' + X[v].astype(str)
+        
+            dummies = pd.get_dummies(X[v]) 
+            X = pd.concat([X, dummies], axis=1)
+            
+            #for token, value in enumerate(X[v].unique()):
+            #    map_dict[value] = token
+            
+            del X[v]
+        
+        self.save = X
+        
+        self.template = pd.DataFrame([], columns=X.columns, index=[])
+        #self.map_dict = map_dict
         
         N_input = len(X.columns)
         
         self.model = Sequential()
-        self.model.add(Dense(16, input_dim=N_input, activation='relu'))
-        self.model.add(Dense(16, activation='relu'))
+        self.model.add(Dense(20, input_dim=N_input, activation='relu'))
+        self.model.add(Dense(32, activation='relu'))
         self.model.add(Dense(16, activation='relu'))
         self.model.add(Dense(1, activation='sigmoid'))
    
         self.model.compile(loss='mean_squared_error', optimizer='adam')
+        self.model.fit(X, Y, epochs=500, batch_size=20)
         
-        #self.model.compile(optimizer='adam', loss='binary_crossentropy')
-        # fit the keras model on the dataset
-        self.model.fit(X, y, epochs=500, batch_size=20)
+        print('Generated new brain.')
         
-        #X, y = format_data(data)
-        #self.model.fit(X, y, epoch=150, batch_size=10)
         
     def predict(self, data):
-        X, _ = format_data(data)
+        if not self.alive:
+            return list(random.rand(len(data)))
+        
+        X = format_data(data, self.template)
         
         predictions = self.model.predict(X)
+        predictions = [c[0] for c in predictions]
         return predictions
         
 
-def format_data(songKey):
-    songKey = songKey.items
-    songs = songKey[songKey.finished]
+def format_data(X, template):
     
-    Y_data = songs[Y_PARAMETERS]
+    for v in DUMMIES:
+        X[v] = v + '_' + X[v].astype(str)
+        
+        dummies = pd.get_dummies(X[v]) 
+        X = pd.concat([X, dummies], axis=1)
+        
+        #for token, value in enumerate(X[v].unique()):
+        #    map_dict[value] = token
+        
+       # X[v].replace(map_dict, inplace=True)
+        del X[v]
     
-    X_data = songs[X_PARAMETERS]
-    X_data = pd.get_dummies(X_data, columns=DUMMIES)
+    out = template.copy()
     
-    return X_data, Y_data
-
+    
+    
+    for c in X.columns:
+        if c in template.columns:
+            out[c] = X[c]
+        else:
+            print('Field %s is not in the template.' % c)
+    
+    out = out.fillna(0)        
+    return out
 
 if __name__ == '__main__':
     import Authorization
@@ -75,12 +124,57 @@ if __name__ == '__main__':
     #song_data = fetch_song_values(sp, songs)
     dp.populate_finished_songs(sp, im)
     
-    X, Y = format_data(im)
+    #X, Y = format_data(im)
     
-    nn = NeuralNetwork(data = im)
+    songs = im.items
+    songs = songs[songs.finished]
+        
+    X = songs[X_PARAMETERS]
+    Y = songs[[Y_VALUE]]
     
-    predictions = nn.predict(im)
+    Xd = songs[DUMMIES]
     
-    ev = nn.model.evaluate(X, Y)
+    map_dict = {}
+    i = 0
+    for v in DUMMIES:
+        X[v] = v + '_' + X[v].astype(str)
+        
+        dummies = pd.get_dummies(X[v]) 
+        X = pd.concat([X, dummies], axis=1)
+        
+        for token, value in enumerate(X[v].unique()):
+            map_dict[value] = token
+            i = i+1
+        
+        X[v].replace(map_dict, inplace=True)
+        del X[v]
+    
+    in_template = pd.DataFrame([], columns=X.columns, index=[])
+    #nn = NeuralNetwork(data = im)
+    #predictions = nn.predict(im)
+    #ev = nn.model.evaluate(X, Y)
+    
+#    N = len(X.index)
+#    N_input = len(X.columns)
+#    
+#    trainI = np.random.choice(Y.index, size=int(N/2), replace=False);
+#    trainIndex = X.index.isin(trainI);
+#
+#    X_train = X.iloc[trainIndex]
+#    Y_train = Y.iloc[trainIndex]
+#    
+#    X_test = X.iloc[~trainIndex]
+#    Y_test = Y.iloc[~trainIndex]
+#    
+#    testModel = Sequential()
+#    testModel.add(Dense(16, input_dim=N_input, activation='relu'))
+#    testModel.add(Dense(16, activation='relu'))
+#    testModel.add(Dense(16, activation='relu'))
+#    testModel.add(Dense(1, activation='sigmoid'))
+#   
+#    testModel.compile(loss='mean_squared_error', optimizer='adam')
+#    testModel.fit(X_train, Y_train, epochs=1000, batch_size=20)
+#    
+#    testModel.evaluate(X_test, Y_test)
     
     

@@ -12,7 +12,7 @@ AUDIO_FEATURES = ['danceability', 'energy', 'loudness', 'mode', 'speechiness', '
 
 CATEGORY_FEATURES = ['mode', 'time_signature']
 
-TRACK_FEATURES = ['explicit', 'popularity']
+TRACK_FEATURES = ['name', 'explicit', 'popularity']
 
 def populate_artists(sp, artistManager):
     artists, _ = artistManager.get_scores()
@@ -54,11 +54,12 @@ def fetch_song_values(sp, songs):
     batches = chunks(songs, 50)
     
     for b in batches:
+        #print('Batch')
         songJSON = sp.tracks(b)
         for item in songJSON['tracks']:
             extract_features(df, item, TRACK_FEATURES)
             
-        songJSON = sp.audio_features(songs)
+        songJSON = sp.audio_features(b)
         for item in songJSON:
             extract_features(df, item, AUDIO_FEATURES)
     
