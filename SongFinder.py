@@ -85,10 +85,11 @@ def add_related_artists(artist, artistKey, sp, brain):
         #TODO adjust score according to ML algorithm
         print('Adding artist: %s' % art['name'])
         
-        score = get_avg_artist_score(art, sp, brain)
+        if not artistKey.containsItem(art['id']):
+            score = get_avg_artist_score(art['id'], sp, brain)
+            artistKey.recordScore(art['id'], score, sample=0, overwrite=False)
         
         artistKey.recordData(art['id'], {'item_name': art['name']}, overwrite=False)
-        artistKey.recordScore(art['id'], score, sample=0, overwrite=False)
         
 def get_avg_artist_score(artist, sp, brain):
     songs = get_artist_songs(sp, artist)
