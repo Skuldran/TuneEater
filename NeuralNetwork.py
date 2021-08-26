@@ -9,8 +9,8 @@ import pandas as pd
 import numpy as np
 from numpy import random
 
-from keras.models import Sequential
-from keras.layers import Dense
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense
 
 
 X_PARAMETERS = ['popularity', 'danceability', 'energy', 'loudness', 'mode', 'speechiness', \
@@ -62,9 +62,8 @@ class NeuralNetwork:
         N_input = len(X.columns)
         
         self.model = Sequential()
-        self.model.add(Dense(20, input_dim=N_input, activation='relu'))
-        self.model.add(Dense(32, activation='relu'))
-        self.model.add(Dense(16, activation='relu'))
+        self.model.add(Dense(16, input_dim=N_input, activation='relu'))
+        self.model.add(Dense(8, activation='relu'))
         self.model.add(Dense(1, activation='sigmoid'))
    
         self.model.compile(loss='mean_squared_error', optimizer='adam')

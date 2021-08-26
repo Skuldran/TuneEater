@@ -87,7 +87,7 @@ def add_related_artists(artist, artistKey, sp, brain):
         
         if not artistKey.containsItem(art['id']):
             score = get_avg_artist_score(art['id'], sp, brain)
-            artistKey.recordScore(art['id'], score, sample=0, overwrite=False)
+            artistKey.recordScore(art['id'], score, sample=6, overwrite=False)
         
         artistKey.recordData(art['id'], {'item_name': art['name']}, overwrite=False)
         

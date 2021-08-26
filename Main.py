@@ -12,6 +12,7 @@ import Authorization
 import SpotifyObserver
 import PlaylistManager as pm
 from Constants import *
+from datetime import datetime
 
 
 def look_for_new_lists(sp):
@@ -74,6 +75,8 @@ for fold in folders:
 
 lastPlaylistCheck = 0 #time.time()
 lastObservation = time.time()
+lastBrain = datetime.now()
+
 
 observer = SpotifyObserver.SpotifyObserver(sp)
 
@@ -96,3 +99,9 @@ while True:
             continue
         
         managerList[observ['context']].song_listened(observ)
+        
+    if lastBrain.day != now().day and lastBrain.hour >= 4:
+        for manager in managerList.values():
+            manager.generate_neural_network()
+            
+        lastBrain = datetime.now()
