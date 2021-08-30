@@ -15,6 +15,7 @@ def find_song(songKey, artistKey, sp, brain):
     artists, weights = artistKey.get_scores()
     
     pick = random.choices(artists, weights)[0]
+    print(pick)
     #pick = random.choice(artists)
     #Choose random song
     song_list = get_artist_songs(sp, pick)

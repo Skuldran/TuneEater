@@ -47,9 +47,15 @@ class PlaylistManager:
         #ML
         self.generate_neural_network()
     
+        #Values to have:
+            # Number of songs
+            # Number of artists
+            # Brain age
+            # Loss value
+    
     def load(self):
         if not os.path.isfile('data//' + self.folder + '//playlist.json'):
-            print('Cant load playlist folder: %s' % self.folder)
+            print('Cant load playlist file: %s' % self.folder)
             
         with open('data//' + self.folder + '//playlist.json', 'r') as fp:
             pl = json.load(fp)
@@ -71,10 +77,9 @@ class PlaylistManager:
            
 
            artists = track['artists']
-           artst_ids = []
+           artist_ids = []
            for a in artists:
                #TODO estimate artist attractiveness
-               print(a)
                self.artists.recordData(a['id'], {'item_name': a['name']}, overwrite=False)
                self.artists.recordScore(a['id'], NEW_ARTIST_SCORE, sample=0, overwrite=False) #TODO use ML
                artist_ids.append(a['id'])
@@ -93,7 +98,7 @@ class PlaylistManager:
         for i in range(len(obs['artist'])):
             if not self.artists.containsItem(obs['artist'][i]):
                 score = sf.get_avg_artist_score(obs['artist'][i], sp, brain)
-                #self.artists.recordScore(obs['artist'][i], score, sample=)
+                self.artists.recordScore(obs['artist'][i], score, sample=6)
             
             self.artists.recordData(obs['artist'][i], {'item_name': obs['artist_names'][i]})
             self.artists.recordScore(obs['artist'][i], obs['listen_fraction'])

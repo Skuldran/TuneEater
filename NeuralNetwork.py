@@ -31,6 +31,7 @@ class NeuralNetwork:
         
         songs = data.items
         songs = songs[songs.finished]
+        songs = songs[songs.loaded_features]
         
         if len(songs.index) < 100:
             self.alive = False
@@ -76,6 +77,8 @@ class NeuralNetwork:
         if not self.alive:
             return list(random.rand(len(data)))
         
+        #Filter out song without audio features
+        data = data[data.loaded_features]
         X = format_data(data, self.template)
         
         predictions = self.model.predict(X)

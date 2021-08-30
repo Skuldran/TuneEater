@@ -54,15 +54,21 @@ def fetch_song_values(sp, songs):
     batches = chunks(songs, 50)
     
     for b in batches:
-        #print('Batch')
         songJSON = sp.tracks(b)
         for item in songJSON['tracks']:
             extract_features(df, item, TRACK_FEATURES)
-            
+        
         songJSON = sp.audio_features(b)
-        for item in songJSON:
+        for i in range(len(songJSON)):
+            item = songJSON[i]
+            song_id = b[i]
+            if item is None:
+                df.at[song_id, 'loaded_features'] = False
+                continue
+            
             extract_features(df, item, AUDIO_FEATURES)
-    
+            df.at[song_id, 'loaded_features'] = True
+            
     return df
 
 def extract_features(df, item, features):

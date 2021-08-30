@@ -13,7 +13,7 @@ import SpotifyObserver
 import PlaylistManager as pm
 from Constants import *
 from datetime import datetime
-
+import random
 
 def look_for_new_lists(sp):
     ans = sp.current_user_playlists()
@@ -26,7 +26,12 @@ def look_for_new_lists(sp):
 
         if '#Cat' in p['name']:
             print('Alive check confirm.')
-            sp.user_playlist_change_details(user_id, p['id'], name=p['name'].replace('#Cat', '#Alive'))    
+            if random.random() < 0.5:
+                stat = '#Dead'
+            else:
+                stat = '#Alive'
+                
+            sp.user_playlist_change_details(user_id, p['id'], name=p['name'].replace('#Cat', stat))    
     
         if p['id'] in managerList.keys():
             continue
@@ -37,8 +42,6 @@ def look_for_new_lists(sp):
             
             in_id = p['id']
             print('Found new playlist to adopt: %s' % p['name'])
-            
-            
             
             sp.user_playlist_change_details(user_id, in_id, name=p['name'].replace('#TuneEater', '#In'))
             ans = sp.user_playlist_create(user_id, p['name'].replace('#TuneEater', '#Out'), public=False)
@@ -55,7 +58,7 @@ def look_for_new_lists(sp):
             
             return in_id, out_id
         
-        return None, None
+    return None, None
             
 #handledPlaylists = []
 managerList = {}
@@ -100,7 +103,7 @@ while True:
         
         managerList[observ['context']].song_listened(observ)
         
-    if lastBrain.day != now().day and lastBrain.hour >= 4:
+    if lastBrain.day != datetime.now().day and lastBrain.hour >= 4:
         for manager in managerList.values():
             manager.generate_neural_network()
             
