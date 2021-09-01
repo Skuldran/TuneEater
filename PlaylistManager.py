@@ -14,6 +14,7 @@ import SongFinder as sf
 from Constants import *
 import NeuralNetwork as nn
 import DataParser as dp
+import numpy as np
 
 def init_PlaylistManager(folder, sp, list_in, list_out):
     manager = PlaylistManager(folder, sp, list_in, list_out)
@@ -81,12 +82,14 @@ class PlaylistManager:
            for a in artists:
                #TODO estimate artist attractiveness
                self.artists.recordData(a['id'], {'item_name': a['name']}, overwrite=False)
-               self.artists.recordScore(a['id'], NEW_ARTIST_SCORE, sample=0, overwrite=False) #TODO use ML
+               self.artists.recordScore(a['id'], NEW_ARTIST_SCORE, sample=0, overwrite=True)
+               #TODO use ML
                artist_ids.append(a['id'])
         
         self.sk.recordData(track['id'], {'item_name': track['name'], 'artists': artist_ids}, overwrite=False)
         self.sk.recordScore(track['id'], -1, sample=0, overwrite=False)
         
+        #TODO create column loaded_features
         #self.generate_neural_network()
         
         self.fill_with_songs()
@@ -97,7 +100,7 @@ class PlaylistManager:
         
         for i in range(len(obs['artist'])):
             if not self.artists.containsItem(obs['artist'][i]):
-                score = sf.get_avg_artist_score(obs['artist'][i], sp, brain)
+                score = sf.get_avg_artist_score(obs['artist'][i], self.sp, self.brain)
                 self.artists.recordScore(obs['artist'][i], score, sample=6)
             
             self.artists.recordData(obs['artist'][i], {'item_name': obs['artist_names'][i]})
@@ -151,6 +154,7 @@ class ItemManager:
         
         if isfile(folder + '/' + file):
             self.items = pd.read_csv(folder + '//' + file, index_col=0)
+            self.items.listen_fraction = np.minimum(1, self.items.listen_fraction)
         else:
             self.items = pd.DataFrame(columns=['name', 'item_id', 'listen_fraction', 'samples', 'finished'], index=[])
             
@@ -187,7 +191,7 @@ class ItemManager:
     
     def recordScore(self, item_id, listen_fraction, sample=1, overwrite=True):
         if self.containsItem(item_id):
-            if not overwrite:
+            if not overwrite and not pd.isnull(self.items.loc[item_id, 'listen_fraction']):
                 return 0
             
             n = self.items.at[item_id, 'samples']+1

@@ -65,7 +65,7 @@ class SpotifyObserver:
             listen_fraction = listen_time / self.last_observation['length']
             print('This guy listened to %s for %g ms (%s %%).' % (self.last_observation['song_name'], listen_time, str(int(100*listen_fraction))))
             out = self.last_observation
-            out['listen_fraction'] = listen_fraction
+            out['listen_fraction'] = min(1, max(0, listen_fraction))
             #out = {'song_id': listen_id, 'song_name': self.last_observation['name'],'listen_fraction': listen_fraction, 'context': self.last_observation['context'], 'context_type': self.last_observation['context_type'], 'artist': self.last_observation['artist']}
         else:
             out = None

@@ -31,13 +31,13 @@ class NeuralNetwork:
         
         songs = data.items
         songs = songs[songs.finished]
-        songs = songs[songs.loaded_features]
         
         if len(songs.index) < 100:
             self.alive = False
             print('Generated placeholder brain.')
             return
         
+        songs = songs[songs.loaded_features]
         self.alive = True
         
         X = songs[X_PARAMETERS]
@@ -78,11 +78,13 @@ class NeuralNetwork:
             return list(random.rand(len(data)))
         
         #Filter out song without audio features
-        data = data[data.loaded_features]
+        #use_data = data[data.loaded_features]
         X = format_data(data, self.template)
         
         predictions = self.model.predict(X)
         predictions = [c[0] for c in predictions]
+        
+        #TODO
         return predictions
         
 

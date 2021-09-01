@@ -13,10 +13,8 @@ import DataParser as dp
 def find_song(songKey, artistKey, sp, brain):
     #Choose random artist based on attractiveness
     artists, weights = artistKey.get_scores()
-    
     pick = random.choices(artists, weights)[0]
-    print(pick)
-    #pick = random.choice(artists)
+    
     #Choose random song
     song_list = get_artist_songs(sp, pick)
     
@@ -43,9 +41,9 @@ def find_song(songKey, artistKey, sp, brain):
     song_vals = dp.fetch_song_values(sp, song_list)
     predict = brain.predict(song_vals)
     
-    best = -1
-    for i in range(1, len(song_vals)):
-        if predict[i] > best:
+    best = 0
+    for i in range(1, len(predict)):
+        if predict[i] > predict[best]:
             best = i
     
     
@@ -84,9 +82,9 @@ def add_related_artists(artist, artistKey, sp, brain):
     artists = temp['artists']
     for art in artists:
         #TODO adjust score according to ML algorithm
-        print('Adding artist: %s' % art['name'])
         
         if not artistKey.containsItem(art['id']):
+            print('Adding artist: %s' % art['name'])
             score = get_avg_artist_score(art['id'], sp, brain)
             artistKey.recordScore(art['id'], score, sample=6, overwrite=False)
         

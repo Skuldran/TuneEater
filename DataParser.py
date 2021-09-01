@@ -24,8 +24,6 @@ def populate_artists(sp, artistManager):
         else:
             i = i+1
             
-    
-            
 def populate_finished_songs(sp, songManager):
     songs, _ = songManager.get_scores(exclude_finished=True)
     
